@@ -1,0 +1,8 @@
+# Default ignored files
+.git
+.idea
+.venv
+venv/*
+idea/*
+__pycache__
+result.json
