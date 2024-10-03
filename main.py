@@ -12,34 +12,44 @@ def gen_express(coef, dispersion, max_coef):
         return A * np.exp(B * x) + C
 
     sum_coef = 1.0
-    while sum_coef < max_coef:
+    if max_coef:
+        while sum_coef < max_coef:
+            current_coef = np.random.uniform(coef - dispersion, coef + dispersion)
+            current_prob = 1.0 / current_coef
+
+            real_prob = current_prob - exp_mapping(current_prob*100.0)
+            test_prob = np.random.uniform(0.0, 1.0)
+            if test_prob <= real_prob:
+                sum_coef *= current_coef
+            else:
+                sum_coef = 0.0
+                return sum_coef
+    else:
         current_coef = np.random.uniform(coef - dispersion, coef + dispersion)
         current_prob = 1.0 / current_coef
 
-        real_prob = current_prob - exp_mapping(current_prob*100.0)
+        real_prob = current_prob - exp_mapping(current_prob * 100.0)
         test_prob = np.random.uniform(0.0, 1.0)
-        if test_prob <= real_prob:
-            sum_coef *= current_coef
-        else:
+        if test_prob > real_prob:
             sum_coef = 0.0
             return sum_coef
     return sum_coef
 
 
 def simulation(coef, dispersion, max_coef, bet_size_coef):
-    start_sum = 10.0
+    start_sum = 20.0
     current_sum = start_sum
-    win_sum = 2000.0
-    steps = 400
+    win_sum = 1000.0
+    steps = 70
     for step in range(steps):
         coef_exp = gen_express(coef, dispersion, max_coef)
-        bet_size = current_sum * bet_size_coef
+        bet_size = round(current_sum * bet_size_coef, 2)
         if bet_size < 0.45:
             bet_size = 0.45
         elif bet_size > 250.0:
             bet_size = 250.0
         if coef_exp > 0:
-            win_size = bet_size * coef_exp
+            win_size = round(bet_size * coef_exp, 2)
             if win_size >= 300.0:
                 win_size = win_size * 0.85
             current_sum += win_size
@@ -55,10 +65,10 @@ def simulation(coef, dispersion, max_coef, bet_size_coef):
 def enumeration_of_options():
     # dict_result = {}
     dict_result = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
-    list_bet_size = [0.05, 0.1, 0.15, 0.2, 0.25]#, 0.3, 0.4, 0.5]
-    list_max_coef = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]#, 2.5, 3.0]
-    list_coef = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8]
-    list_dispersion = [0.01, 0.02, 0.03, 0.04]
+    list_bet_size = [0.25]
+    list_max_coef = [1.15, 1.3]#, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.5, 3.0]
+    list_coef = [1.15]#, 1.2, 1.25]#, 1.3]#, 1.4, 1.5, 1.6, 1.7, 1.8]
+    list_dispersion = [0.00]#, 0.02]#, 0.03, 0.04]
     list_type = ['Win', 'Count win step', 'Loss', 'Count loss step']
     # df_list_bet_size = [0.1, 0.2, 0.3, 0.4, 0.5]
     # df_list_max_coef = [1.5, 2.0, 2.5, 3.0]
@@ -87,8 +97,9 @@ def enumeration_of_options():
             print("    " + f"{max_coef}")
             for cur_coef in list_coef:
                 print("        " + f"{cur_coef}")
-                if cur_coef > max_coef:
-                    continue
+                if max_coef:
+                    if cur_coef > max_coef:
+                        continue
 
                 win_percent = 0.0
                 aver_win_sum_count_step = 0.0
@@ -98,7 +109,7 @@ def enumeration_of_options():
                     dis_win_count = 0
                     win_sum_count_step = 0.0
                     loss_sum_count_step = 0.0
-                    steps = 1000
+                    steps = 10000
                     for n in range(1, steps + 1):
                         result, count_step = simulation(cur_coef, dispersion, max_coef, bet_size)
                         if result == "win":
@@ -129,11 +140,13 @@ def enumeration_of_options():
                 aver_win_sum_count_step = aver_win_sum_count_step/len(list_dispersion)
                 aver_loss_sum_count_step = aver_loss_sum_count_step/len(list_dispersion)
 
-                if win_percent < 50.0:
+                if win_percent < 65.0:
+                    continue
+                if aver_win_sum_count_step > 100:
                     continue
                 dict_result[bet_size][max_coef][cur_coef] = {
-                    "win": [win_percent, aver_win_sum_count_step],
-                    "pass": [100.0 - win_percent, aver_loss_sum_count_step]
+                    "win": [round(win_percent, 1), round(aver_win_sum_count_step, 1)],
+                    "pass": [round(100.0 - win_percent, 1), round(aver_loss_sum_count_step, 1)]
                 }
 
     df = pd.DataFrame(dict_result)
